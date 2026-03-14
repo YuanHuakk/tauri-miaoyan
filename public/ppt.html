@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+
+  <!-- Reveal.js core -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/dist/reveal.css" />
+  <link id="reveal-theme" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/dist/theme/white.css" />
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
+
+  <!-- Highlight.js theme -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/plugin/highlight/monokai.css" />
+
+  <style>
+    @font-face {
+      font-family: 'TsangerJinKai02-W04';
+      font-display: fallback;
+      src: url('/TsangerJinKai02-W04.ttf') format('truetype');
+    }
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+
+    .reveal .slides section {
+      font-family: 'TsangerJinKai02-W04', -apple-system, BlinkMacSystemFont,
+        'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB',
+        'Microsoft YaHei UI', 'Microsoft YaHei', Arial, sans-serif;
+      text-align: left;
+    }
+
+    /* Slide number — same as MiaoYan ppt.html */
+    .reveal .slide-number {
+      left: 24px;
+      right: auto;
+      bottom: 24px;
+      font-size: 1.3rem;
+      background: rgba(0, 0, 0, 0.08);
+      color: #000;
+      padding: 4px 12px;
+      border-radius: 999px;
+      backdrop-filter: blur(12px);
+    }
+    .reveal .slide-number span { font-size: inherit; }
+
+    /* Mermaid diagrams in slides */
+    .mermaid-diagram {
+      background: #f7f7f7;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 0.8em 0;
+    }
+    .mermaid-diagram svg { display: block; margin: 0 auto; max-width: 100%; }
+  </style>
+</head>
+<body>
+  <div class="reveal" id="write">
+    <div class="slides">
+      <section data-markdown data-separator="^---$" data-separator-vertical="^--$">
+        <script type="text/template">MIAOYAN_PPT_CONTENT</script>
+      </section>
+    </div>
+  </div>
+
+  <!-- Reveal.js core + plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/plugin/markdown/markdown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/plugin/highlight/highlight.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/plugin/notes/notes.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/plugin/math/math.js"></script>
+
+  <!-- Mermaid — same lib as MiaoYan -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <!-- KaTeX (for math plugin fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"></script>
+
+  <script>
+    // Receive markdown content and theme from parent
+    window.addEventListener('message', function(e) {
+      if (!e.data || e.data.type !== 'ppt-init') return;
+
+      var content = e.data.content;
+      var dark = e.data.dark;
+
+      // Swap theme
+      var themeLink = document.getElementById('reveal-theme');
+      if (themeLink) {
+        themeLink.href = dark
+          ? 'https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/dist/theme/night.css'
+          : 'https://cdn.jsdelivr.net/npm/reveal.js@5.2.1/dist/theme/white.css';
+      }
+
+      // Inject content
+      var tpl = document.querySelector('script[type="text/template"]');
+      if (tpl) tpl.textContent = content;
+
+      initReveal(dark);
+    });
+
+    // Forward Escape key to parent so PPT mode can exit
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        window.parent.postMessage({ type: 'ppt-exit' }, '*');
+      }
+    });
+
+    function initReveal(dark) {
+      Reveal.initialize({
+        width: '100%',
+        height: '100%',
+        controls: true,
+        progress: true,
+        history: false,
+        transition: 'slide',
+        backgroundTransition: 'none',
+        center: false,
+        slideNumber: false,
+        plugins: [RevealMarkdown, RevealHighlight, RevealNotes, RevealMath.KaTeX]
+      }).then(function() {
+        // Auto-center single-child slides (same as MiaoYan)
+        var sections = document.querySelectorAll('.slides section');
+        sections.forEach(function(item) {
+          if (item.childElementCount === 1) {
+            item.classList.add('center');
+          }
+        });
+
+        // Render mermaid diagrams
+        renderMermaid(dark);
+
+        // Render KaTeX math (auto-render for inline/display math)
+        if (typeof renderMathInElement === 'function') {
+          renderMathInElement(document.body, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '$', right: '$', display: false },
+              { left: '\\(', right: '\\)', display: false },
+              { left: '\\[', right: '\\]', display: true }
+            ],
+            throwOnError: false
+          });
+        }
+      });
+    }
+
+    function renderMermaid(dark) {
+      if (typeof mermaid === 'undefined') return;
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: dark ? 'dark' : 'default',
+        securityLevel: 'loose'
+      });
+
+      var blocks = document.querySelectorAll('pre code.language-mermaid');
+      blocks.forEach(function(code, i) {
+        var pre = code.parentElement;
+        if (!pre) return;
+        var id = 'mermaid-ppt-' + i;
+        mermaid.render(id, code.textContent || '').then(function(result) {
+          var wrapper = document.createElement('div');
+          wrapper.className = 'mermaid-diagram';
+          wrapper.innerHTML = result.svg;
+          pre.replaceWith(wrapper);
+        }).catch(function() {
+          // Leave code block as-is on error
+        });
+      });
+    }
+  </script>
+</body>
+</html>
